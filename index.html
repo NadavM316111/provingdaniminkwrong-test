@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Draw</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+        .colors {
+            display: flex;
+            gap: 8px;
+        }
+        .color-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        .color-btn.active {
+            border-color: #fff;
+        }
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 25px;
+        }
+        .tool-group label {
+            color: #aaa;
+            font-size: 14px;
+        }
+        input[type="range"] {
+            width: 100px;
+            cursor: pointer;
+        }
+        button {
+            background: #6c5ce7;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s, transform 0.2s;
+        }
+        button:hover {
+            background: #5b4cdb;
+            transform: scale(1.05);
+        }
+        .eraser-btn.active {
+            background: #e17055;
+        }
+        canvas {
+            background: #fff;
+            border-radius: 12px;
+            cursor: crosshair;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>✏️ Simple Draw</h1>
+    
+    <div class="toolbar">
+        <div class="colors">
+            <div class="color-btn active" style="background: #000" data-color="#000"></div>
+            <div class="color-btn" style="background: #e74c3c" data-color="#e74c3c"></div>
+            <div class="color-btn" style="background: #e67e22" data-color="#e67e22"></div>
+            <div class="color-btn" style="background: #f1c40f" data-color="#f1c40f"></div>
+            <div class="color-btn" style="background: #2ecc71" data-color="#2ecc71"></div>
+            <div class="color-btn" style="background: #3498db" data-color="#3498db"></div>
+            <div class="color-btn" style="background: #9b59b6" data-color="#9b59b6"></div>
+            <div class="color-btn" style="background: #fff; border: 2px solid #ccc" data-color="#ffffff"></div>
+        </div>
+        
+        <div class="tool-group">
+            <label>Size:</label>
+            <input type="range" id="brushSize" min="1" max="50" value="5">
+            <span id="sizeValue" style="color:#fff; width:30px;">5</span>
+        </div>
+        
+        <button class="eraser-btn" id="eraserBtn">🧽 Eraser</button>
+    </div>
+    
+    <canvas id="canvas" width="800" height="500"></canvas>
+    
+    <div class="actions">
+        <button id="clearBtn">🗑️ Clear</button>
+        <button id="downloadBtn">💾 Download</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const brushSizeInput = document.getElementById('brushSize');
+        const sizeValue = document.getElementById('sizeValue');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const colorBtns = document.querySelectorAll('.color-btn');
+        
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentColor = '#000';
+        let brushSize = 5;
+        let isEraser = false;
+        
+        // Set up canvas
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Load from localStorage
+        const saved = localStorage.getItem('simple-draw');
+        if (saved) {
+            const img = new Image();
+            img.onload = () => ctx.drawImage(img, 0, 0);
+            img.src = saved;
+        }
+        
+        function save() {
+            localStorage.setItem('simple-draw', canvas.toDataURL());
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = isEraser ? '#fff' : currentColor;
+            ctx.lineWidth = brushSize;
+            ctx.stroke();
+            
+            lastX = x;
+            lastY = y;
+        }
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = (e.clientX || e.touches[0].clientX) - rect.left;
+            lastY = (e.clientY || e.touches[0].clientY) - rect.top;
+        }
+        
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                save();
+            }
+        }
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        // Color selection
+        colorBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                colorBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentColor = btn.dataset.color;
+                isEraser = false;
+                eraserBtn.classList.remove('active');
+            });
+        });
+        
+        // Brush size
+        brushSizeInput.addEventListener('input', () => {
+            brushSize = brushSizeInput.value;
+            sizeValue.textContent = brushSize;
+        });
+        
+        // Eraser
+        eraserBtn.addEventListener('click', () => {
+            isEraser = !isEraser;
+            eraserBtn.classList.toggle('active');
+        });
+        
+        // Clear
+        clearBtn.addEventListener('click', () => {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            save();
+        });
+        
+        // Download
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'drawing.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    </script>
+</body>
+</html>
